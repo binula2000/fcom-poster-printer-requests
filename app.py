@@ -38,7 +38,8 @@ if 'submission_status' not in st.session_state:
 is_locked = st.session_state.submission_status != "intake"
 
 def send_to_power_automate(name, email_addr, filename, file_bytes, option_text):
-    webhook_url = "https://default16fd0d7b63a54fae9f64a98ac4019d.7d.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/8a90362a4ac9439c9447c0d07f8536c0/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=0kzXSYYPRaxja5nY4exUjHrE545PZ73fOleFUgEBTZI"
+    # Pull the URL from the secure secrets instead of hardcoding it
+    webhook_url = st.secrets["POWER_AUTOMATE_URL"]
     file_b64 = base64.b64encode(file_bytes).decode('utf-8')
     payload = {
         "submitterName": name, "submitterEmail": email_addr, "chosenOption": option_text, "fileName": filename, "fileBase64": file_b64
@@ -101,6 +102,7 @@ if st.session_state.submission_status != "success":
 
 # 6. Preview Section
 if st.session_state.submission_status == "preview":
+    st.markdown("<div id='scroll_anchor'></div>", unsafe_allow_html=True)
     st.divider()
     doc = fitz.open(stream=st.session_state.pdf_bytes, filetype="pdf")
     page = doc[0]
@@ -130,3 +132,14 @@ if st.session_state.submission_status == "preview":
             if send_to_power_automate(st.session_state.user_info["name"], st.session_state.user_info["email"], st.session_state.file_name, st.session_state.pdf_bytes, f"Option B ({opt_b_w:.1f}x36)"):
                 st.session_state.submission_status = "success"
                 st.rerun()
+
+# 2. Trigger the scroll to the anchor
+if st.session_state.submission_status == "preview":
+    st.markdown("""
+        <script>
+            var element = window.parent.document.getElementById('scroll_anchor');
+            if (element) {
+                element.scrollIntoView({behavior: 'smooth'});
+            }
+        </script>
+    """, unsafe_allow_html=True)
